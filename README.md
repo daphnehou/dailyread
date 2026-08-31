@@ -1,4 +1,3 @@
-
 # I-O Psych Digest — web version
 
 A single scrollable page built from `io_psych_digest.xlsx`. Designed for reading on a phone.
@@ -42,29 +41,66 @@ https://YOUR-USERNAME.github.io/io-psych-digest/
 
 Open that on your phone and add it to your home screen — it behaves like an app.
 
-### 3. Let the daily task push for you
+### 3. Publishing
 
-The morning task rebuilds the page automatically, but it runs in a sandbox that has no access
-to your GitHub login. To let it push, give the repo a token it can use.
+**Publishing has to happen on your Mac, not from Claude's sandbox.** Two hard limits make
+automated pushing from the sandbox impossible:
 
-1. GitHub → Settings → Developer settings → **Personal access tokens** → **Fine-grained tokens**
-2. Generate a token scoped to **only this one repo**, with **Repository permissions →
-   Contents: Read and write**. Nothing else. Set an expiry you're comfortable with.
-3. Store it in the remote URL:
+- The sandbox can create and modify files in this folder but **cannot delete them**. Git needs
+  to create and remove lock files (`.git/index.lock`) constantly, so the first git command
+  leaves a lock behind and every command after it fails.
+- `api.github.com` is blocked from the sandbox, so the GitHub API isn't a way around it.
 
-```bash
-cd ~/Desktop/"Daily Read"/digest-site
-git remote set-url origin https://YOUR-TOKEN@github.com/YOUR-USERNAME/io-psych-digest.git
+So the morning task rebuilds `index.html` locally, and you publish. Double-click:
+
+```
+publish.command
 ```
 
-**Worth knowing:** this writes the token in plain text into `.git/config` on your Mac. That file
-is never committed, so it won't end up on GitHub — but anyone with access to your laptop could
-read it. That's the tradeoff for unattended pushing. Keep the token scoped to this single repo
-so the blast radius stays small, and revoke it on GitHub if you ever stop using this setup.
+It clears any stale lock files, rebuilds the page from the current spreadsheet, commits, pulls
+anything you changed on github.com, and pushes. The Terminal window shows what happened and
+waits for a keypress before closing.
 
-If you'd rather not store a token, skip this step. The task will still rebuild `index.html`
-every morning and just tell you it couldn't push; you then run `git push` yourself whenever
-you like.
+If macOS blocks it the first time ("cannot be opened because it is from an unidentified
+developer"), right-click → Open → Open, or run `chmod +x publish.command` once.
+
+### 4. Optional: publish automatically each morning
+
+To skip the double-click, have macOS run the same script on a schedule. Save this as
+`~/Library/LaunchAgents/com.daphnehou.dailyread.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.daphnehou.dailyread</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/daph/Desktop/Daily Read/digest-site/publish.command</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>0</integer></dict>
+  <key>StandardOutPath</key><string>/tmp/dailyread.log</string>
+  <key>StandardErrorPath</key><string>/tmp/dailyread.log</string>
+</dict>
+</plist>
+```
+
+Then load it once:
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.daphnehou.dailyread.plist
+```
+
+8:00am gives the 7:10am digest task time to finish. The script skips its "press any key" pause
+when it isn't run from a Terminal, so it exits cleanly. Check `/tmp/dailyread.log` if a morning
+seems to have been missed — and note the job only fires if your Mac is awake.
+
+Git needs to already have your GitHub credentials for this to work unattended. Run
+`publish.command` by hand once first; if the push succeeds without prompting, the scheduled run
+will too.
 
 ---
 
@@ -73,7 +109,7 @@ you like.
 ```bash
 cd ~/Desktop/"Daily Read"/digest-site
 python3 build_site.py           # rebuild index.html only
-python3 build_site.py --push    # rebuild, then commit and push
+python3 build_site.py --push    # rebuild, commit, pull --rebase, push
 ```
 
 Needs `openpyxl` (`pip3 install openpyxl`).

@@ -1,0 +1,5 @@
+.DS_Store
+~$*
+*.xlsx
+.git-credentials
+__pycache__/
