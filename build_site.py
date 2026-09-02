@@ -92,6 +92,7 @@ THEME_RULES = [
         "team", "collaboration", "work group", "psychological safety", "friendship"]),
     ("Employment Relationships & Gig Work", [
         "gig", "platform", "employment relationship", "psychological contract",
+        "i-deal", "idiosyncratic deal",
         "precarious", "multiple jobholding", "side-hustle", "overqualification",
         "underemployment", "non-standard", "skills mismatch", "talent management",
         "pay transparency", "compensation", "job insecurity"]),
